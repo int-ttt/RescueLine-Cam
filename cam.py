@@ -22,6 +22,21 @@ rcvPACKET = bytearray([])
 Object = list([])
 objectCount = 0
 
+PACKET = b''
+
+
+length = {'Int8' : 1, 'uInt8' : 1, 'Int16' : 2, 'uInt16' : 2, 'Int32' : 4, 'uInt32' : 4, 'float' : 4}
+format = {'Int8' : '<b', 'uInt8' : '<B', 'Int16' : '<h', 'uInt16' : '<H', 'Int32' : '<l', 'uInt32' : '<L', 'float' : '<f'}
+
+def addData(type, array):
+    global PACKET
+    if isinstance(array,list):
+        array = array[:8]     # max array size is 5 byte
+        for element in array:
+            PACKET += struct.pack(format[type], element)
+    else:
+        PACKET += struct.pack(format[type], array)
+
 def _parsing(_data) -> tuple["uInt8", "Int16", "Int16", "uInt8", "uInt8"]: # 7byte
     buf = struct.unpack("<BhhBB", _data)
     return tuple(buf)
@@ -39,8 +54,8 @@ def readPacket() -> bool:
     if rcvPACKET[0] == 0xAA:
         PacketIndex = 1
         rcvPACKET += ser.read()
+        PacketIndex = 2
         if rcvPACKET[1] == 0xCC:
-            PacketIndex = 2
             rcvPACKET += ser.read(6)
             rcvPACKET += ser.read() # ObjectCount
             objectCount = rcvPACKET[8]
@@ -59,6 +74,18 @@ def readPacket() -> bool:
                 print("CHECK SUM ERROR")
                 return False
 
+            return True
+        if rcvPACKET[1] == 0xDD:
+            rcvPACKET += ser.read(4)
+            rcvPACKET += ser.read()  # CHECKSUM
+
+            chksum = 0
+            for r in rcvPACKET:  # CHECKSUM 계산
+                chksum ^= r
+
+            if chksum != 0:  # CHECKSUM ERROR
+                print("CHECK SUM ERROR")
+                return False
             return True
     return False
             
@@ -122,3 +149,31 @@ def getCoCam():
                 break
             yield False, 0
         yield True, cam
+
+def setCamMode(mode):
+    PACKET = b''
+    ser.clear()
+    addData("uInt8", 0xAA)
+    addData("uInt8", mode)
+    ser.write(PACKET)
+    while True:
+        if ser.waiting() > 0:
+            if ser.read() == 0xEE:
+                break
+
+
+
+def setCoCamMode(mode):
+    while True:
+        PACKET = b''
+        ser.clear()
+        addData("uInt8", 0xAA)
+        addData("uInt8", mode)
+        ser.write(PACKET)
+        while True:
+            if ser.waiting() > 0:
+                if ser.read() == 0xEE:
+                    break
+            yield False
+
+        yield True

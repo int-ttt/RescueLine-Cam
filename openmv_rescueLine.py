@@ -204,9 +204,20 @@ def CAMERA(i=0):
     print("")
 
 def TOF():
-    tof1 = TOF2.read()
-    
+    tof = TOF2.read()
+    imuv = IMU.euler()
+    print("TOF1 : ", tof1)
+    print('imuV', imuv)
 
+
+    addData('uInt8', 0xAA)          # PACKET HEADER 0xAA, 0xEE
+    addData('uInt8', 0xDD)
+
+    addData('uInt16', tof1)
+    addData('uInt16', imuv[0])
+    chksum = 0
+    for b in PACKET:
+        chksum ^= b
 #    pyb.delay(10)
 
 
@@ -233,6 +244,8 @@ while(True):
             print("MODE:",mode)
             uart.write(b'0xEE')
     uart.write(PACKET)
+
+    pyb.delay(10)
 #    print("median", sum(Median) / len(Median))
 #    print("mean", sum(Mean) / len(Mean))  24 25 25 7 1 35 20 30
 
