@@ -66,3 +66,9 @@ def euler() -> Tuple[float, float, float]:
             l.append(x / 16)
         _euler = tuple(l)
         yield IMU(_euler[0], _euler[1], _euler[2]-180 if _euler[2] > 0 else _euler[2]+180)
+
+wait(700)
+_write_register(0x3D, 0x00) #동작모드를 CONFIG로 변경
+wait(20)
+_write_register(0x3D, 0x08) #동작모드를 IMU로 변경
+wait(20)
